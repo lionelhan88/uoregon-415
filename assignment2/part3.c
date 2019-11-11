@@ -6,14 +6,14 @@
 
 
 pid_t forkChild(char *command, char **arguments){
-	pid_t pid; 
+	pid_t pid;
 
 	pid = fork();
 	if(pid == -1){
-		printf("Error, failed to fork \n");			
+		printf("Error, failed to fork \n");
 	}else if(pid == 0){
 
-		printf("child pid is %d\n", getpid());	
+		printf("child pid is %d\n", getpid());
 		execvp( command, arguments);
 		system("sleep 2");
 		_exit(0);
@@ -44,7 +44,7 @@ int exist_test(int exist[], int count){
 			alive += 1;
 		}
 	}
-	return alive; 	
+	return alive;
 }
 
 int main(int argc, char *argv[]){
@@ -54,7 +54,8 @@ int main(int argc, char *argv[]){
 	char* token = NULL;
 	pid_t pid[10];
 	FILE *fp;
-	int count=0, i, j=0, wstatus, countArg = 0, k, a=0, commands;
+	int test = 0;
+	int count=0, i, j=0, wstatus, countArg = 0, k, a=0;
 
 	if(argc != 2){
 		printf("The program need exact one file to execute, please try again\n");
@@ -69,7 +70,7 @@ int main(int argc, char *argv[]){
 	 				countArg++;
  				}
 			}
-			count = countArg + 1; 
+			count = countArg + 1;
 			char *array[count];										// count how many arguments each line has in the file
 			for(i=0; i <= count ; i++){
 				array[i] = NULL;									// initialize an array pointer
@@ -98,12 +99,11 @@ int main(int argc, char *argv[]){
 			exist[i] = 0;
 		}
 
-		signal(SIGALRM, alarmHandler);	
+		signal(SIGALRM, alarmHandler);
 		kill(pid[0],SIGCONT);
 		w = waitpid(pid[0], &wstatus, WNOHANG);
 		a = exist_test(exist, j);
 		while(a>1){
-
 			for(runPid=0; runPid<j; runPid++){
 				printf("process %d is running \n", pid[runPid]);
 			 	if(w == 0){
@@ -116,18 +116,15 @@ int main(int argc, char *argv[]){
 						kill(pid[(runPid+1)%j],SIGCONT);					// sending start signal
 						alarmFlg = 0 ;
 			 		}
-						
-				}else if(w == -1 ){
-					exist[runPid] = -1;											// respectively put -1 when pid is finished running 
-					//b++;
-					//continue;
-				}
 
-				w = waitpid(pid[(runPid+1)%j], &wstatus, WNOHANG);
+				}else if(w == -1 ){
+					exist[runPid] = -1;											// respectively put -1 when pid is finished runningHa
+				}
+			 	test = (runPid + 1) % j;
+				w = waitpid(pid[test], &wstatus, WNOHANG);
 				a = exist_test(exist, j);
 				printf("w here is %d, for pid: %d\n", w, pid[(runPid+1)%j]);
 			}
-			//system("sleep 1");
 		}
 
 		//w = waitpid(pid[runPid], &wstatus, WNOHANG);
@@ -139,10 +136,10 @@ int main(int argc, char *argv[]){
 			printf("pid is waiting %d\n", pid[k]);
 		 	waitpid(pid[k], &wstatus, WNOHANG );
 		}
-		
+
 	}
 	free(text);
 	fclose(fp);
-	
+
 	return 0;
 }
