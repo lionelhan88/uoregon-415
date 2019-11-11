@@ -101,14 +101,16 @@ int main(int argc, char *argv[]){
 		signal(SIGALRM, alarmHandler);	
 		kill(pid[0],SIGCONT);
 		w = waitpid(pid[0], &wstatus, WNOHANG);
-		while((exist_test(exist, j))>0){
-			printf("a is here %d\n", a);
+		a = exist_test(exist, j);
+		while(a>1){
+
 			for(runPid=0; runPid<j; runPid++){
-			 	if(w == 0 ){
+				printf("process %d is running \n", pid[runPid]);
+			 	if(w == 0){
 			 		alarm(1);
 			 		system("sleep 1");
 			 		if(alarmFlg==1){
-			 			printf("stopping signal to %d\n", pid[runPid]);		
+			 			printf("stopping signal to %d\n", pid[runPid]);
 						kill(pid[runPid], SIGSTOP);							// sending stop signal
 						printf("running signal to %d\n", pid[(runPid+1)%j]);
 						kill(pid[(runPid+1)%j],SIGCONT);					// sending start signal
@@ -120,11 +122,19 @@ int main(int argc, char *argv[]){
 					//b++;
 					//continue;
 				}
+
 				w = waitpid(pid[(runPid+1)%j], &wstatus, WNOHANG);
+				a = exist_test(exist, j);
 				printf("w here is %d, for pid: %d\n", w, pid[(runPid+1)%j]);
 			}
 			//system("sleep 1");
-		}		
+		}
+
+		//w = waitpid(pid[runPid], &wstatus, WNOHANG);
+		if(w==0){
+			printf("running last available process %d\n", pid[runPid]);
+			kill(pid[runPid],SIGCONT);
+		}
 		for(k=0; k<j; k++){
 			printf("pid is waiting %d\n", pid[k]);
 		 	waitpid(pid[k], &wstatus, WNOHANG );
