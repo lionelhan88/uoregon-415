@@ -19,7 +19,7 @@ struct MTQ{
 
 int enqueue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 	int ticNum = 0;
-	printf("test num is %s\n", meal->name);
+
 	while(meal->buffer[ticNum].dish != NULL){
 	// 	printf("ticket num is %d\n", ticNum);
 	 	ticNum += 1; 
@@ -27,7 +27,7 @@ int enqueue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 	 		ticNum = 0;
 	 		break;
 	 	}
-	 	printf("ticket num is %d\n", ticNum);
+	 
 	}
 	if(MTQ_ID != meal->name){
 		printf("Meal name not match!\n");
@@ -43,29 +43,32 @@ int enqueue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 }
 
 
-// int dequeue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal, int ticketNum){
+int dequeue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal, int ticketNum){
 	
-// 	printf("tail is %d\n", meal->tail);
-// 	if(meal->tail == 1){
-// 		printf("%s is empty\n", meal->name);
-// 		return 0;
-// 	}
+	
+	if(meal->tail == 1){
+		printf("%s is empty\n", meal->name);
+		return 0;
+	}
+	printf("ta num is %d, tail is %d\n", ticketNum, meal->tail);
+	for(int i=0; i<meal->tail; i++){
+		printf("taaaaa num is %d, tail is %d \n", meal->buffer[i].ticketNum, meal->tail);
+		if(meal->buffer[i].ticketNum == ticketNum){
+			printf("im here\n");
+			meal->tail -= 1;
+			for(int l=i ; l<meal->tail; l++){
+				meal->buffer[l].ticketNum = meal->buffer[l+1].ticketNum;
+				meal->buffer[l].dish = meal->buffer[l+1].dish;
+			}
+			return 1;
+		}
+	}
 
-// 	for(int i=0; i<meal->tail; i++){
-// 		if(meal->buffer[i].ticketNum == ticketNum){
-// 			meal->tail -= 1;
-// 			for(int l=i ; l<meal->tail; l++){
-// 				meal->buffer[l].ticketNum = meal->buffer[l+1].ticketNum;
-// 				meal->buffer[l].dish = meal->buffer[l+1].dish;
-// 			}
-// 		}else{
-// 			printf("Ticket number not found %d\n", ticketNum);
-// 			return 0;
-// 		}
-// 	}
-// 	return 1;
+	printf("Ticket number not found %d\n", ticketNum);
+	return 0;
 	
-// }
+	
+}
 
 void initMTQ(int length, struct MTQ meal, char MTQNAME[]){
 
@@ -135,8 +138,8 @@ int main(){
 	enqueue("Breakfast", &mt2, registry[0] );
 	enqueue("Breakfast", &mt3, registry[0] );
 
-	// dequeue("Breakfast", &mt1, registry[0], 321 );
-	// dequeue("Breakfast", &mt1, registry[0], 321 );
+	dequeue("Breakfast", &mt1, registry[0], 123 );
+//	dequeue("Breakfast", &mt1, registry[0], 1223 );
 	for(int i=0; i<2; i++){
 		printf("regi name %d, \n", registry[0]->buffer[i].ticketNum);
 		printf("regi name %s, \n", registry[0]->buffer[i].dish);
