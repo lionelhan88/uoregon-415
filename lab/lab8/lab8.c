@@ -20,7 +20,7 @@ struct MTQ{
 int enqueue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 	int ticNum = 0;
 	while(meal->buffer[ticNum].dish != NULL){
-	 	ticNum += 1; 
+	 	ticNum += 1;
 	 	if(ticNum == 4){
 	 		ticNum = 0;
 	 		return 0;
@@ -31,20 +31,21 @@ int enqueue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 	}else{
 		meal->buffer[ticNum].dish = MT->dish;
 		meal->buffer[ticNum].ticketNum = MT->ticketNum;
-		meal->tail += 1;  
+		meal->tail += 1;
 		return 1;
 	}
-	
+
 }
 
 
 int dequeue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
-	
+
 	if(meal->tail == 1){
 		return 0;
 	}
 	for(int i=0; i<meal->tail; i++){
 		if(meal->buffer[i].ticketNum == MT->ticketNum){
+			printf("Queue %s - Ticket Number: %d - Dish: %s \n", meal->name, meal->buffer[i].ticketNum, meal->buffer[i].dish);
 			meal->tail -= 1;
 	 		for(int l=i ; l<meal->tail; l++){
 				meal->buffer[l].ticketNum = meal->buffer[l+1].ticketNum;
@@ -53,7 +54,7 @@ int dequeue(char *MTQ_ID, struct mealTicket *MT, struct MTQ *meal){
 			return 1;
 		}
 	}
-	return 0;	
+	return 0;
 }
 
 
@@ -63,30 +64,30 @@ int main(){
 
 	breakfast.name = "Breakfast";
 	breakfast.head = 0;
-	breakfast.tail = 1; 
+	breakfast.tail = 1;
 	breakfast.length = 3;
 	breakfast.buffer = malloc(breakfast.length * sizeof(struct mealTicket));
 
 	lunch.name = "Lunch";
 	lunch.head = 0;
-	lunch.tail = 1; 
+	lunch.tail = 1;
 	lunch.length = 3;
 	lunch.buffer = malloc(lunch.length * sizeof(struct mealTicket));
 
 	dinner.name = "Dinner";
 	dinner.head = 0;
-	dinner.tail = 1; 
+	dinner.tail = 1;
 	dinner.length = 3;
 	dinner.buffer = malloc(dinner.length * sizeof(struct mealTicket));
 
 	bar.name = "Bar";
 	bar.head = 0;
-	bar.tail = 1; 
+	bar.tail = 1;
 	bar.length = 3;
 	bar.buffer = malloc(bar.length * sizeof(struct mealTicket));
 
 	struct MTQ *registry[4];
-	
+
 	registry[0] = &breakfast;
 	registry[1] = &lunch;
 	registry[2] = &dinner;
@@ -130,15 +131,23 @@ int main(){
 	mt12.dish = "whisky";
 
 	int result;
-	
+
 	result = dequeue("Breakfast", &mt1, registry[0] );
 	if(result == 0 && registry[0]->tail == 1){
+		printf("The queue is empty\n");
 		printf("Test Case A - Result Fail\n");
 	}else{
 		printf("Test Case A - Result Success\n");
 	}
 
-	enqueue("Breakfast", &mt1, registry[0] );
+
+	result = enqueue("Breakfast", &mt1, registry[0] );
+	if(result == 1){
+	//	printf("Adding meal %s to Breakfast\n", mt1.dish);
+		printf("Test Case D - Result Success\n");
+	}else{
+		printf("Test Case D - Result Fail\n");
+	}
 	enqueue("Breakfast", &mt2, registry[0] );
 	enqueue("Breakfast", &mt3, registry[0] );
 
@@ -154,13 +163,22 @@ int main(){
 	enqueue("Bar", &mt11, registry[3] );
 	enqueue("Bar", &mt12, registry[3] );
 
-	for(int i=0; i<4; i++){
-		printf("Queue %s - Ticket Number: %d - Dish: %s \n", registry[i]->name, registry[i]->buffer[0].ticketNum, registry[i]->buffer[0].dish);	
+	result = enqueue("Breakfast", &mt1, registry[0] );
+	if(result == 0 && registry[0]->tail == 4){
+		printf("The queue is full\n");
+		printf("Test Case C - Result Fail\n");
 	}
 
-	dequeue("Breakfast", &mt1, registry[0] );
+//	dequeue("Breakfast", &mt_(0+1), registry[0] );
 
-
+//	int result;
+//
+//	for(int i=0; i<4; i++){
+//		dequeue("Breakfast", &mt(i+1), registry[0] );
+//		dequeue("Lunch", &mt(i+4), registry[1] );
+//		dequeue("Dinner", &mt(i+7), registry[2] );
+//		dequeue("Bar", &mt(i+9), registry[3]);
+//	}
 
 	free(breakfast.buffer);
 	free(lunch.buffer);
