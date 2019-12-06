@@ -9,6 +9,7 @@
 #define NUMOFBUFFER 5									// max number of queues 
 
 int enNum = 1;
+int diff, check = 1;
 
 struct topicEntry{
 	int entryNum;
@@ -40,15 +41,15 @@ struct threadEnq{
 		int lastEntry;
 };
 
-#define RCBUFFER(tpQueue, id, len)						\
-	struct topicEntry tpQueue##_entry[MAXENTRIES];		\
-	struct topicQueue tpQueue = {						\
-		.name = id,										\
-		.entry = tpQueue##_entry,						\
-		.head = 0,										\
-		.tail = 0,										\
-		.length = len									\
-	}
+#define RCBUFFER(tpQueue, id, len)\
+	struct topicEntry tpQueue##_entry[MAXENTRIES];	\
+	struct topicQueue tpQueue={						\
+		.name = id,									\
+		.entry = tpQueue##_entry,					\
+		.head = 0,									\
+		.tail = 0,									\
+		.length = len 								\
+}
 
 
 
@@ -218,8 +219,7 @@ void* subscriber(void* arg){
 } // subscriber
 
 void* pthread_cleanUp(void* arg){
-	struct threadEnq *threadCle =(struct threadEnq *) arg;
-	int diff, check = 1; 
+	struct threadEnq *threadCle =(struct threadEnq *) arg; 
 	pthread_mutex_unlock(&lock[threadCle->lockPos]);
 	threadCle->result = cleanUp(&threadCle->temp, threadCle->Q_id);
 	printf("clean up result: %d\n", threadCle->result);
@@ -243,7 +243,7 @@ int main(){
 	char *qName = "first_queue";
 	// struct topicQueue *tpQueue;
 
-	RCBUFFER(tpQueue, qName, 5);
+	RCBUFFER(tpQueue, "first_queue", 5);
 
 	// RCBUFFER(tpQueue1, "second_queue");
 	// RCBUFFER(tpQueue2, "third_queue");
