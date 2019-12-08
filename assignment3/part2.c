@@ -9,7 +9,7 @@
 #define NUMOFBUFFER 500									// max number of queues
 int delta = 0;											// delta variable to clean up the old entries
 int enNum = 1;
-int check = 1;
+int check = 1 , subFile=0, subTable=0;
 
 
 struct topicEntry{
@@ -18,6 +18,7 @@ struct topicEntry{
 	int pubID;
 	char photoURL[100];
 	char photoCaption[100];
+	char topName[100];
 };
 
 struct topicQueue{
@@ -88,7 +89,6 @@ int enqueue(struct topicQueue *tpQueue, char *URL, char *Caption, int pubID){
 
 
 int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp){
-	printf("getEntry called\n");
 	if(tpQueue->head == tpQueue->tail || lastEntry == tpQueue->head || lastEntry == 0){
 		return 0;
 	}
@@ -97,6 +97,7 @@ int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp)
 			temp->entryNum = tpQueue->entry[(j+1)].entryNum;
 			temp->timeStamp = tpQueue->entry[(j+1)].timeStamp;
 			temp->pubID = tpQueue->entry[(j+1)].pubID;
+			strcpy(temp->topName, tpQueue->name);
 			strcpy(temp->photoURL, tpQueue->entry[(j+1)].photoURL);
 			strcpy(temp->photoCaption, tpQueue->entry[(j+1)].photoCaption);
 			return 1;
@@ -104,6 +105,7 @@ int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp)
 			temp->entryNum = tpQueue->entry[tpQueue->tail].entryNum;
 			temp->timeStamp = tpQueue->entry[tpQueue->tail].timeStamp;
 			temp->pubID = tpQueue->entry[tpQueue->tail].pubID;
+			strcpy(temp->topName, tpQueue->name);
 			strcpy(temp->photoURL, tpQueue->entry[tpQueue->tail].photoURL);
 			strcpy(temp->photoCaption, tpQueue->entry[tpQueue->tail].photoCaption);
 			return temp->entryNum;
@@ -124,20 +126,17 @@ int dequeue(struct topicQueue *tpQueue){
 } // dequeue()
 
 int cleanUp(struct topicEntry *temp, struct topicQueue *tpQueue){
-	
 	gettimeofday(&temp->timeStamp,NULL);
 	int diff, result;
-	printf("y1111111111 %d \n", delta);
+
 	if (tpQueue->head == tpQueue->tail){
+	
 		return 0;
 	}
-
 	for (int j = 0; j < tpQueue->head; ++j){
 		diff = (int)(temp->timeStamp.tv_sec) - (int)(tpQueue->entry[j].timeStamp.tv_sec);
-		printf("yooooooooooooooo %d \n", diff);
 		if (diff > delta){
 			result = dequeue(tpQueue);
-			printf("dequeue called %d\n", result);
 			if (result == 0){
 				return 0;
 			}
@@ -167,6 +166,15 @@ void initThreadDeq(char *Q_id){
 } // initialize threadDeq
 
 
+void initPtred(){
+	
+	for (int i = 0; i < MAXENTRIES; ++i){
+		pub[i].flag = 0;
+		sub[i].flag = 0;
+	}
+} // initialize threadDeq
+
+
 void* publisher(void* arg){
 	struct threadEnq *threadEnq =(struct threadEnq *) arg;
 
@@ -178,10 +186,12 @@ void* publisher(void* arg){
 	threadEnq->result = enqueue(&Registry[threadEnq->regisNum], threadEnq->topicEntry.photoURL,
 			threadEnq->topicEntry.photoCaption, threadEnq->topicEntry.pubID);
 	printf("publisher result: %d\n", threadEnq->result);
+	printf("-------------------------------------------------------------------------\n");
 	pthread_mutex_unlock(&mutex[threadEnq->lockPos]);
 	for (int i = 0; i < MAXENTRIES; ++i){
 		if (pub[i].thread_id == pthread_self()){
 			pub[i].flag = 0;
+			break;
 		}
 	}
 	return NULL;
@@ -190,21 +200,75 @@ void* publisher(void* arg){
 
 void* subscriber(void* arg){
 	struct threadEnq *threadDeq =(struct threadEnq *) arg;
+	char name[20];
+	int x=0;
 
 	pthread_mutex_lock(&condition_mutex);
 	pthread_cond_wait(&cond, &condition_mutex);
 	pthread_mutex_unlock(&condition_mutex);
+	
+	for(int i=0; i<subFile; i++){
+		x += 1;
+		snprintf(name, 12, "Sub_%d.html", x);
+		FILE *ptrFile = fopen( name, "w");
+		for(int j=0; j<subTable; j++){
+			pthread_mutex_lock(&mutex[threadDeq->lockPos]);
+			threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp);
+			printf("subscriber result: %d\n", threadDeq->result);
+			// printf("threadEnq: %s %s\n", temp.photoURL, temp.photoCaption);
+			printf("-------------------------------------------------------------------------\n");
+			
+			fprintf(ptrFile, "<!DOCTYPE html>\n"); 
+			fprintf(ptrFile, "<html>\n"); 
+			fprintf(ptrFile, "<title>%s</title>\n", name);
+			fprintf(ptrFile, "\n"); 
+			fprintf(ptrFile, "<style>\n");
+			fprintf(ptrFile, "table, th, td {\n");
+			fprintf(ptrFile, "  border: 1px solid black;\n");
+			fprintf(ptrFile, "  border-collapse: collapse;\n");
+			fprintf(ptrFile, "}\n");
+			fprintf(ptrFile, "th, td {\n");
+			fprintf(ptrFile, "  padding: 5px;\n");
+			fprintf(ptrFile, "}\n");
+			fprintf(ptrFile, "th {\n");
+			fprintf(ptrFile, "  text-align: left;\n");
+			fprintf(ptrFile, "}\n");
+			fprintf(ptrFile, "</style>\n");
+			fprintf(ptrFile, "\n");
+			fprintf(ptrFile, "</head>\n");
+			fprintf(ptrFile, "<body>\n");
+			fprintf(ptrFile, "\n");
+			fprintf(ptrFile, "<h1>Subsriber: %s</h1>\n", name);
+			fprintf(ptrFile, "\n");
+			fprintf(ptrFile, "<h2>Topic Name: %s</h2>\n", temp.topName);
+			fprintf(ptrFile, "\n");
+			fprintf(ptrFile, "<table style=\"width:100%%\" align=\"middle\">\n");
+			fprintf(ptrFile, " <tr>\n");
+			fprintf(ptrFile, "  <th>CAPTION</th>\n");
+			fprintf(ptrFile, "  <th>PHOTO-URL</th>\n");
+			fprintf(ptrFile, " </tr>\n");
+			fprintf(ptrFile, " <tr>\n");
+			fprintf(ptrFile, "  <td>%s</td>\n", temp.photoCaption);
+			fprintf(ptrFile, "  <td>%s</td>\n", temp.photoURL);
+			fprintf(ptrFile, "</table>\n");
+			fprintf(ptrFile, "</body>\n");
+			fprintf(ptrFile, "</html>\n");
+			pthread_mutex_unlock(&mutex[threadDeq->lockPos]);
+		}
+		fclose(ptrFile);
+	}
 
-	pthread_mutex_lock(&mutex[threadDeq->lockPos]);
-	threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp);
-	printf("-------------------------------------------------------------------------\n");
-	printf("subscriber result: %d\n", threadDeq->result);
-	printf("threadEnq: %s %s\n", temp.photoURL, temp.photoCaption);
-	printf("-------------------------------------------------------------------------\n");
-	pthread_mutex_unlock(&mutex[threadDeq->lockPos]);
+	
+
+	
+	// printf("cap: %s, url: %s\n", temp.photoCaption, temp.photoURL);
+
+	
+	
 	for (int i = 0; i < MAXENTRIES; ++i){
 		if (sub[i].thread_id == pthread_self()){
 			sub[i].flag = 0;
+			break;
 		}
 	}
 	return NULL;
@@ -217,19 +281,12 @@ void* pthread_cleanUp(void* arg){
 	pthread_cond_wait(&cond, &condition_mutex);
 	pthread_mutex_unlock(&condition_mutex);
 
-	printf("testse 122222\n");
 	while(check == 1){
 		pthread_mutex_lock(&lock[threadCle->lockPos]);
-		
-		printf("idd %s\n", threadCle->Q_id);
 		check = cleanUp(&temp, &Registry[threadCle->regisNum]);
-		printf("clean up the old entries %d\n", check);
 		pthread_mutex_unlock(&lock[threadCle->lockPos]);
 		sched_yield();
-
 	}
-	
-	
 	return NULL;
 } // pthread_cleanUp()
 
@@ -253,7 +310,7 @@ void createQueue(int id, char *name, int len){
 int main(int argc, char* argv[]){
 
 	char *token, *pubToken, *subToken, *command[5], *pubcmd[5], *subcmd[4], *text = NULL, *dummy = NULL, pubFilename[100], 
-		subFilename[100], *pubText = NULL, *subText = NULL, *dummy1 = NULL, *dummy2 = NULL;
+		subFilename[100], *pubText = NULL, *subText = NULL, *dummy1 = NULL, *dummy2 = NULL ;
 	size_t size=0, line; 
 	int tk1_cnt=0, tk2_cnt=0, tk3_cnt=0;
 	int pub_cnt=0, pthred_cnt=0, sub_cnt=0, sthred_cnt=0;
@@ -268,12 +325,13 @@ int main(int argc, char* argv[]){
 		exit(-1);
 	}else if(strstr(argv[1],".txt")){
 		initRgistry();
+		initPtred();
+
 		FILE *fp;
 		fp = fopen(argv[1], "r");
 		
 		while( (line = getline(&text, &size, fp)) != -1){
 			dummy = text;
-			printf("Command is: %s\n", dummy);
 			while(token = strtok_r(dummy, " ", &dummy)){
 				command[tk1_cnt] = token;
 				tk1_cnt += 1;
@@ -281,7 +339,7 @@ int main(int argc, char* argv[]){
 			tk1_cnt = 0;
 
 			if (strcmp(command[0], "create") == 0){
-				printf("------------------------------------------------------------\n");
+				printf("-------------------------------------------------------------------------\n");
 				printf("Activating queue\n");
 				createQueue(atoi(command[2]), command[3], atoi(command[4]));
 				initThreadEnq(command[3]);
@@ -295,7 +353,7 @@ int main(int argc, char* argv[]){
 					strcpy(pubFilename, strtok_r(command[2], "\"", &command[2]));
 					if (strlen(pubFilename) <= 1 || !(strstr(pubFilename,".txt") ) ){
 						printf("Publisher filename error, please try again\n");
-						printf("------------------------------------------------------------\n");
+						printf("-------------------------------------------------------------------------\n");
 						fclose(fp);
 						free(text);
 						return -1;
@@ -319,7 +377,7 @@ int main(int argc, char* argv[]){
 
 							}else if(strcmp(pubcmd[0], "stop") == 0){
 								printf("Ends of publisher file: %s\n", pubFilename);
-								printf("------------------------------------------------------------\n");
+								printf("-------------------------------------------------------------------------\n");
 								fclose(fpPub);
 								free(pubText);
 								break;
@@ -329,20 +387,26 @@ int main(int argc, char* argv[]){
 							}
 						}
 
-						pub[pthred_cnt].flag = 1;
+						for(int i=0; i<MAXENTRIES; i++){
+							if(pub[i].flag == 0){
+								for(int j=0; j<pub_cnt; j++){
 
-						for(int i=0; i<pub_cnt; i++){
-							pthread_create(&(pub[pthred_cnt].thread_id), NULL, publisher, &threadEnq[i]);
+									pub[i].flag = 1;
+									threadEnq[j].topicEntry.pubID = pub[i].thread_id;
+							
+									pthread_create(&(pub[i].thread_id), NULL, publisher, &threadEnq[j]);
+
+								}
+								break;
+							}
 						}
-						
-						pQuery[pthred_cnt] = pthread_self();
-						pthred_cnt += 1;
 					}
 				}else if(strcmp(command[1], "subscriber") == 0){
+					subFile += 1;
 					strcpy(subFilename, strtok_r(command[2], "\"", &command[2]));
 					if (strlen(subFilename) <= 1 || !(strstr(subFilename,".txt") ) ){
 						printf("Subscriber filename error, please try again\n");
-						printf("------------------------------------------------------------\n");
+						printf("-------------------------------------------------------------------------\n");
 						fclose(fp);
 						free(text);
 						return -1;
@@ -362,10 +426,11 @@ int main(int argc, char* argv[]){
 								threadDeq[sub_cnt].regisNum = ruc;
 								threadDeq[sub_cnt].lastEntry = atoi(subcmd[2]);
 								sub_cnt += 1;
+								subTable += 1;
 
 							}else if(strcmp(subcmd[0], "stop") == 0){
 								printf("Ends of subscribers file: %s\n", subFilename);
-								printf("------------------------------------------------------------\n");
+								printf("-------------------------------------------------------------------------\n");
 								fclose(fpSub);
 								free(subText);
 								break;
@@ -375,55 +440,54 @@ int main(int argc, char* argv[]){
 							}
 						}
 
-						sub[sthred_cnt].flag = 1;
+						sleep(1);
+						for(int i=0; i<MAXENTRIES; i++){
+							if(sub[i].flag == 0){
+								for(int j=0; j<sub_cnt; j++){
+									sub[i].flag = 1;
+									pthread_create(&(sub[i].thread_id), NULL, subscriber, &threadDeq[j]);
 
-						for(int i=0; i<sub_cnt; i++){
-							pthread_create(&(sub[sthred_cnt].thread_id), NULL, subscriber, &threadDeq[i]);
+								}
+								break;
+							}
 						}
-						
-						sQuery[sthred_cnt] = pthread_self();
-						sthred_cnt += 1;
-
 					}
 				}				
 			} 
 
 			if(strcmp(command[0], "query") == 0){
-
 				if(strcmp(command[1], "topics\n") == 0){
-			
 					printf("There are %d queues activating \n", actQueue );
-
 					for (int i = 0; i < actQueue; ++i){
-				
 						printf("Queue id %d, name: %s, length: %d\n", Registry[i].id, Registry[i].name, Registry[i].length );
-						printf("------------------------------------------------------------\n");						 
+						printf("-------------------------------------------------------------------------\n");					 
 					}
 				}
-
 				if (strcmp(command[1], "publishers\n") == 0){
-
-					for (int i = 0; i < pthred_cnt; ++i){
-						printf("Proxy thread %d - type: Publisher \n", pQuery[i]);
+					for (int i = 0; i < MAXENTRIES; ++i){
+						if(pub[i].flag == 1){
+							printf("Proxy thread %ld - type: Publisher\n", pub[i].thread_id);
+							printf("-------------------------------------------------------------------------\n");
+						}	
 					}
 				}
-
 				if(strcmp(command[1], "subscribers\n") == 0){
-
-					for (int i = 0; i < sthred_cnt; ++i){
-						printf("Proxy thread %d - type: Subscriber \n", sQuery[i]);
+					for (int i = 0; i < MAXENTRIES; ++i){
+						if(sub[i].flag == 1){
+							printf("Proxy thread %ld - type: Subscriber \n", sub[i].thread_id);
+							printf("-------------------------------------------------------------------------\n");
+						}	
 					}
 				}
 			} 
 
 			if(strcmp(command[0], "delta") == 0){
 				delta = atoi(command[1]);
-				printf("delta command %d\n", delta);
+				printf("delta is %d\n", delta);
+				printf("-------------------------------------------------------------------------\n");
 			}
 
-			 if(strcmp(command[0], "start\n") == 0){
-
-printf("22222222222222222222222222\n");
+			 if(strcmp(command[0], "start\n") == 0 || strcmp(command[0], "start") == 0){
 
 			 	for (int k = 0; k < MAXENTRIES; ++k){	
 					if (pub[k].flag == 1){
@@ -434,55 +498,36 @@ printf("22222222222222222222222222\n");
 					}
 				}
 
+				sleep(2);
 				for (int k = 0; k < MAXENTRIES; ++k){	
 					if (pub[k].flag == 1){
 						pthread_mutex_lock(&condition_mutex);
 						pthread_cond_broadcast(&cond);
 						pthread_mutex_unlock(&condition_mutex);
 						pthread_join(sub[k].thread_id, NULL);
+
 					}
 				}
 
-sleep(1);
-printf("33333333333333333333333333333333333\n");
-
-
+				sleep(1);
 
 				for (int i = 0; i < actQueue; ++i){
 
-                                        threadCle[i].regisNum = i;
-
-                                        pthread_create(&(cle.thread_id), NULL, pthread_cleanUp, &threadCle[i]);
-
-                                }
-
-
+                	threadCle[i].regisNum = i;
+                    pthread_create(&(cle.thread_id), NULL, pthread_cleanUp, &threadCle[i]);
+                }
 
 				sleep(1);
 		
 				pthread_mutex_lock(&condition_mutex);
 				pthread_cond_broadcast(&cond);
+				printf("Start cleaning up the old entries\n");
+				printf("-------------------------------------------------------------------------\n");
 				pthread_mutex_unlock(&condition_mutex);
-				pthread_join(cle.thread_id, NULL);
-			
-				
+				pthread_join(cle.thread_id, NULL);			 	
 
-			 	
-			}	
-			
-		}
-
-		// for (int j = 0; j < 2; ++j)
-		// {
-		// 	/* code */
-		// }
-
-		for (int i = 0; i < 6; ++i)
-		{
-			printf("TTTTTTTTT: %s, %d, %s, %s, %d, %d\n", Registry[0].name, Registry[0].entry[i].pubID, 
-					Registry[0].entry[i].photoURL, Registry[0].entry[i].photoCaption, Registry[0].head,
-					Registry[0].entry[i].entryNum);
-		}
+			}		
+		}		
 		token = NULL;
 		fclose(fp);
 	}		
