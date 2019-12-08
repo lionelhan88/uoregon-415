@@ -9,7 +9,8 @@
 #define NUMOFBUFFER 500									// max number of queues
 int delta = 0;											// delta variable to clean up the old entries
 int enNum = 1;
-int check = 1 , subFile=0, subTable=0;
+int check = 1 , subFile=0, subTable=0, z=-1;
+int i, j;
 
 
 struct topicEntry{
@@ -47,7 +48,7 @@ struct threadEnq{
 };
 
 struct topicQueue Registry[NUMOFBUFFER];
-struct topicEntry temp;
+struct topicEntry tepp[MAXENTRIES], temp1;
 struct topicEntry Entries[NUMOFBUFFER][MAXENTRIES];
 struct threadEnq threadEnq[MAXENTRIES], threadDeq[MAXENTRIES], threadCle[NUMOFBUFFER];
 struct pthread pub[MAXENTRIES], sub[MAXENTRIES], cle;
@@ -92,23 +93,24 @@ int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp)
 	if(tpQueue->head == tpQueue->tail || lastEntry == tpQueue->head || lastEntry == 0){
 		return 0;
 	}
+	z+=1;
 	for (int j = tpQueue->tail; j < tpQueue->head; j++){
 		if (tpQueue->entry[j].entryNum == lastEntry){
-			temp->entryNum = tpQueue->entry[(j+1)].entryNum;
-			temp->timeStamp = tpQueue->entry[(j+1)].timeStamp;
-			temp->pubID = tpQueue->entry[(j+1)].pubID;
-			strcpy(temp->topName, tpQueue->name);
-			strcpy(temp->photoURL, tpQueue->entry[(j+1)].photoURL);
-			strcpy(temp->photoCaption, tpQueue->entry[(j+1)].photoCaption);
+			tepp[z].entryNum = tpQueue->entry[(j+1)].entryNum;
+			tepp[z].timeStamp = tpQueue->entry[(j+1)].timeStamp;
+			tepp[z].pubID = tpQueue->entry[(j+1)].pubID;
+			strcpy(tepp[z].topName, tpQueue->name);
+			strcpy(tepp[z].photoURL, tpQueue->entry[(j+1)].photoURL);
+			strcpy(tepp[z].photoCaption, tpQueue->entry[(j+1)].photoCaption);
 			return 1;
 		}else if(lastEntry <= tpQueue->tail){
-			temp->entryNum = tpQueue->entry[tpQueue->tail].entryNum;
-			temp->timeStamp = tpQueue->entry[tpQueue->tail].timeStamp;
-			temp->pubID = tpQueue->entry[tpQueue->tail].pubID;
-			strcpy(temp->topName, tpQueue->name);
-			strcpy(temp->photoURL, tpQueue->entry[tpQueue->tail].photoURL);
-			strcpy(temp->photoCaption, tpQueue->entry[tpQueue->tail].photoCaption);
-			return temp->entryNum;
+			tepp[z].entryNum = tpQueue->entry[tpQueue->tail].entryNum;
+			tepp[z].timeStamp = tpQueue->entry[tpQueue->tail].timeStamp;
+			tepp[z].pubID = tpQueue->entry[tpQueue->tail].pubID;
+			strcpy(tepp[z].topName, tpQueue->name);
+			strcpy(tepp[z].photoURL, tpQueue->entry[tpQueue->tail].photoURL);
+			strcpy(tepp[z].photoCaption, tpQueue->entry[tpQueue->tail].photoCaption);
+			return tepp[z].entryNum;
 		}
 	}
 	return 0;
@@ -147,7 +149,7 @@ int cleanUp(struct topicEntry *temp, struct topicQueue *tpQueue){
 
 void initThreadEnq(char *Q_id){
 	
-	for (int i = 0; i < MAXENTRIES; ++i){
+	for (i = 0; i < MAXENTRIES; ++i){
 		threadEnq[i].lockPos = 0;
 		strcpy(threadEnq[i].Q_id, Q_id);
 		threadEnq[i].result = 0;
@@ -157,7 +159,7 @@ void initThreadEnq(char *Q_id){
 
 void initThreadDeq(char *Q_id){
 	
-	for (int i = 0; i < MAXENTRIES; ++i){
+	for (i = 0; i < MAXENTRIES; ++i){
 		threadDeq[i].lockPos = 0;
 		strcpy(threadDeq[i].Q_id, Q_id);
 		threadDeq[i].lastEntry = (i+1);
@@ -200,70 +202,21 @@ void* publisher(void* arg){
 
 void* subscriber(void* arg){
 	struct threadEnq *threadDeq =(struct threadEnq *) arg;
-	char name[20];
-	int x=0;
+	
 
 	pthread_mutex_lock(&condition_mutex);
 	pthread_cond_wait(&cond, &condition_mutex);
 	pthread_mutex_unlock(&condition_mutex);
-	
-	for(int i=0; i<subFile; i++){
-		x += 1;
-		snprintf(name, 12, "Sub_%d.html", x);
-		FILE *ptrFile = fopen( name, "w");
-		for(int j=0; j<subTable; j++){
-			pthread_mutex_lock(&mutex[threadDeq->lockPos]);
-			threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp);
-			printf("subscriber result: %d\n", threadDeq->result);
-			// printf("threadEnq: %s %s\n", temp.photoURL, temp.photoCaption);
-			printf("-------------------------------------------------------------------------\n");
-			
-			fprintf(ptrFile, "<!DOCTYPE html>\n"); 
-			fprintf(ptrFile, "<html>\n"); 
-			fprintf(ptrFile, "<title>%s</title>\n", name);
-			fprintf(ptrFile, "\n"); 
-			fprintf(ptrFile, "<style>\n");
-			fprintf(ptrFile, "table, th, td {\n");
-			fprintf(ptrFile, "  border: 1px solid black;\n");
-			fprintf(ptrFile, "  border-collapse: collapse;\n");
-			fprintf(ptrFile, "}\n");
-			fprintf(ptrFile, "th, td {\n");
-			fprintf(ptrFile, "  padding: 5px;\n");
-			fprintf(ptrFile, "}\n");
-			fprintf(ptrFile, "th {\n");
-			fprintf(ptrFile, "  text-align: left;\n");
-			fprintf(ptrFile, "}\n");
-			fprintf(ptrFile, "</style>\n");
-			fprintf(ptrFile, "\n");
-			fprintf(ptrFile, "</head>\n");
-			fprintf(ptrFile, "<body>\n");
-			fprintf(ptrFile, "\n");
-			fprintf(ptrFile, "<h1>Subsriber: %s</h1>\n", name);
-			fprintf(ptrFile, "\n");
-			fprintf(ptrFile, "<h2>Topic Name: %s</h2>\n", temp.topName);
-			fprintf(ptrFile, "\n");
-			fprintf(ptrFile, "<table style=\"width:100%%\" align=\"middle\">\n");
-			fprintf(ptrFile, " <tr>\n");
-			fprintf(ptrFile, "  <th>CAPTION</th>\n");
-			fprintf(ptrFile, "  <th>PHOTO-URL</th>\n");
-			fprintf(ptrFile, " </tr>\n");
-			fprintf(ptrFile, " <tr>\n");
-			fprintf(ptrFile, "  <td>%s</td>\n", temp.photoCaption);
-			fprintf(ptrFile, "  <td>%s</td>\n", temp.photoURL);
-			fprintf(ptrFile, "</table>\n");
-			fprintf(ptrFile, "</body>\n");
-			fprintf(ptrFile, "</html>\n");
-			pthread_mutex_unlock(&mutex[threadDeq->lockPos]);
-		}
-		fclose(ptrFile);
-	}
 
 	
 
+	pthread_mutex_lock(&mutex[threadDeq->lockPos]);
+	threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp1);
+	printf("subscriber result: %d\n", threadDeq->result);
+	printf("-------------------------------------------------------------------------\n");
 	
-	// printf("cap: %s, url: %s\n", temp.photoCaption, temp.photoURL);
-
 	
+	pthread_mutex_unlock(&mutex[threadDeq->lockPos]);
 	
 	for (int i = 0; i < MAXENTRIES; ++i){
 		if (sub[i].thread_id == pthread_self()){
@@ -283,7 +236,7 @@ void* pthread_cleanUp(void* arg){
 
 	while(check == 1){
 		pthread_mutex_lock(&lock[threadCle->lockPos]);
-		check = cleanUp(&temp, &Registry[threadCle->regisNum]);
+		check = cleanUp(&temp1, &Registry[threadCle->regisNum]);
 		pthread_mutex_unlock(&lock[threadCle->lockPos]);
 		sched_yield();
 	}
@@ -310,11 +263,11 @@ void createQueue(int id, char *name, int len){
 int main(int argc, char* argv[]){
 
 	char *token, *pubToken, *subToken, *command[5], *pubcmd[5], *subcmd[4], *text = NULL, *dummy = NULL, pubFilename[100], 
-		subFilename[100], *pubText = NULL, *subText = NULL, *dummy1 = NULL, *dummy2 = NULL ;
+		subFilename[100], *pubText = NULL, *subText = NULL, *dummy1 = NULL, *dummy2 = NULL, name[20] ;
 	size_t size=0, line; 
 	int tk1_cnt=0, tk2_cnt=0, tk3_cnt=0;
 	int pub_cnt=0, pthred_cnt=0, sub_cnt=0, sthred_cnt=0;
-	int actQueue=0, actPub=-1, cur = -1, ruc=-1, actSub=0;
+	int actQueue=0, actPub=-1, cur = -1, ruc=-1, actSub=0, x=0, m;
 	int publisherID[MAXENTRIES];
 	struct topicEntry temp;
 	int pQuery[MAXENTRIES], sQuery[MAXENTRIES];
@@ -387,9 +340,9 @@ int main(int argc, char* argv[]){
 							}
 						}
 
-						for(int i=0; i<MAXENTRIES; i++){
+						for(i=0; i<MAXENTRIES; i++){
 							if(pub[i].flag == 0){
-								for(int j=0; j<pub_cnt; j++){
+								for(j=0; j<pub_cnt; j++){
 
 									pub[i].flag = 1;
 									threadEnq[j].topicEntry.pubID = pub[i].thread_id;
@@ -441,9 +394,9 @@ int main(int argc, char* argv[]){
 						}
 
 						sleep(1);
-						for(int i=0; i<MAXENTRIES; i++){
+						for(i=0; i<MAXENTRIES; i++){
 							if(sub[i].flag == 0){
-								for(int j=0; j<sub_cnt; j++){
+								for(j=0; j<sub_cnt; j++){
 									sub[i].flag = 1;
 									pthread_create(&(sub[i].thread_id), NULL, subscriber, &threadDeq[j]);
 
@@ -452,6 +405,8 @@ int main(int argc, char* argv[]){
 							}
 						}
 					}
+					m = subTable;
+					subTable=0;
 				}				
 			} 
 
@@ -510,6 +465,52 @@ int main(int argc, char* argv[]){
 				}
 
 				sleep(1);
+				int o = 0, v=0;
+				for(i=0; i<subFile; i++){
+					x += 1;
+					snprintf(name, 12, "Sub_%d.html", x);
+					FILE *ptrFile = fopen( name, "w");
+					for(j=0; j<m; j++){
+						fprintf(ptrFile, "<!DOCTYPE html>\n"); 
+						fprintf(ptrFile, "<html>\n"); 
+						fprintf(ptrFile, "<title>%s</title>\n", name);
+						fprintf(ptrFile, "\n"); 
+						fprintf(ptrFile, "<style>\n");
+						fprintf(ptrFile, "table, th, td {\n");
+						fprintf(ptrFile, "  border: 1px solid black;\n");
+						fprintf(ptrFile, "  border-collapse: collapse;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "th, td {\n");
+						fprintf(ptrFile, "  padding: 5px;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "th {\n");
+						fprintf(ptrFile, "  text-align: left;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "</style>\n");
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "</head>\n");
+						fprintf(ptrFile, "<body>\n");
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<h1>Subsriber: %s</h1>\n", name);
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<h2>Topic Name: %s</h2>\n", tepp[v].topName);
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<table style=\"width:100%%\" align=\"middle\">\n");
+						fprintf(ptrFile, " <tr>\n");
+						fprintf(ptrFile, "  <th>CAPTION</th>\n");
+						fprintf(ptrFile, "  <th>PHOTO-URL</th>\n");
+						fprintf(ptrFile, " </tr>\n");
+						fprintf(ptrFile, " <tr>\n");
+						fprintf(ptrFile, "  <td>%s</td>\n", tepp[v].photoCaption);
+						fprintf(ptrFile, "  <td>%s</td>\n", tepp[v].photoURL);
+						fprintf(ptrFile, "</table>\n");
+						fprintf(ptrFile, "</body>\n");
+						fprintf(ptrFile, "</html>\n");
+						v += 1;
+
+					}
+					
+				}
 
 				for (int i = 0; i < actQueue; ++i){
 
