@@ -423,13 +423,7 @@ int main(int argc, char* argv[]){
 
 			 if(strcmp(command[0], "start\n") == 0){
 
-			 	for (int i = 0; i < actQueue; ++i){
-
-			 		threadCle[i].regisNum = i;
-
-					pthread_create(&(cle.thread_id), NULL, pthread_cleanUp, &threadCle[i]);
-
-				}
+printf("22222222222222222222222222\n");
 
 			 	for (int k = 0; k < MAXENTRIES; ++k){	
 					if (pub[k].flag == 1){
@@ -449,7 +443,19 @@ int main(int argc, char* argv[]){
 					}
 				}
 
-				
+sleep(1);
+printf("33333333333333333333333333333333333\n");
+
+
+
+				for (int i = 0; i < actQueue; ++i){
+
+                                        threadCle[i].regisNum = i;
+
+                                        pthread_create(&(cle.thread_id), NULL, pthread_cleanUp, &threadCle[i]);
+
+                                }
+
 
 
 				sleep(1);
