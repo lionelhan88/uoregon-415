@@ -1,0 +1,13 @@
+put 1 "test_photo_URL_1" "test_photo_caption_1" 
+sleep 1000
+put 1 "test_photo_URL_2" "test_photo_caption_2" 
+sleep 1000
+put 1 "test_photo_URL_3" "test_photo_caption_3" 
+sleep 1000
+put 1 "test_photo_URL_4" "test_photo_caption_4" 
+sleep 1000
+put 1 "test_photo_URL_5" "test_photo_caption_5" 
+sleep 1000
+put 1 "test_photo_URL_6" "test_photo_caption_6" 
+sleep 1000
+stop
