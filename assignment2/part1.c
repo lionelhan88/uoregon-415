@@ -29,7 +29,7 @@ int main(int argc, char *argv[]){
 	char* token = NULL;
 	pid_t pid[10];
 	FILE *fp;
-	int count=0, i, j=0, wstatus, countArg = 0, numCom = 0;
+	int count=0, i,k, j=0, wstatus, countArg = 0, numCom = 0;
 
 	if(argc != 2){
 		printf("The program need exact one file to execute, please try again\n");
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]){
 			j++;
 		}
 		sleep(3);
-		for(int k=0; k<j; k++){
+		for(k=0; k<j; k++){
 			printf("pid is waiting %d\n", pid[k]);
 		 	waitpid(pid[k], &wstatus, WUNTRACED);
 		}
