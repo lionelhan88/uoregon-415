@@ -1,0 +1,8 @@
+create topic 0 "somename" 5
+query topics
+add publisher "publisher.txt"
+query publishers
+add subscriber "subscriber.txt"
+query subscribers
+delta 5
+start
