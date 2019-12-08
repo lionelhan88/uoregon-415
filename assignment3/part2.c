@@ -175,7 +175,6 @@ void* publisher(void* arg){
 	pthread_mutex_unlock(&condition_mutex);
 
 	pthread_mutex_lock(&mutex[threadEnq->lockPos]); 
-
 	threadEnq->result = enqueue(&Registry[threadEnq->regisNum], threadEnq->topicEntry.photoURL,
 			threadEnq->topicEntry.photoCaption, threadEnq->topicEntry.pubID);
 	printf("publisher result: %d\n", threadEnq->result);
@@ -422,7 +421,7 @@ int main(int argc, char* argv[]){
 				printf("delta command %d\n", delta);
 			}
 
-			 if(strcmp(command[0], "start") == 0){
+			 if(strcmp(command[0], "start\n") == 0){
 
 			 	for (int i = 0; i < actQueue; ++i){
 
