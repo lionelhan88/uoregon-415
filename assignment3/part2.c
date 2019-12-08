@@ -139,6 +139,7 @@ int cleanUp(struct topicEntry *temp, struct topicQueue *tpQueue){
 		diff = (int)(temp->timeStamp.tv_sec) - (int)(tpQueue->entry[j].timeStamp.tv_sec);
 		if (diff > delta){
 			result = dequeue(tpQueue);
+			printf("Dequeue is called, result %d\n", result);
 			if (result == 0){
 				return 0;
 			}
@@ -187,7 +188,8 @@ void* publisher(void* arg){
 	pthread_mutex_lock(&mutex[threadEnq->lockPos]); 
 	threadEnq->result = enqueue(&Registry[threadEnq->regisNum], threadEnq->topicEntry.photoURL,
 			threadEnq->topicEntry.photoCaption, threadEnq->topicEntry.pubID);
-	printf("publisher result: %d\n", threadEnq->result);
+	printf("publisher result: %d, Topic Queue head: %d, tail: %d\n", threadEnq->result, Registry[threadEnq->regisNum].head,
+			Registry[threadEnq->regisNum].tail);
 	printf("-------------------------------------------------------------------------\n");
 	pthread_mutex_unlock(&mutex[threadEnq->lockPos]);
 	for (int i = 0; i < MAXENTRIES; ++i){
@@ -339,8 +341,9 @@ int main(int argc, char* argv[]){
 								sleep(sleepTime);
 							}
 						}
+						printf("hggggggggggggggggggggggggggg %d\n", pub_cnt);
 
-						for(i=0; i<MAXENTRIES; i++){
+						for(i=0; i<actPub; i++){
 							if(pub[i].flag == 0){
 								for(j=0; j<pub_cnt; j++){
 
@@ -349,9 +352,11 @@ int main(int argc, char* argv[]){
 							
 									pthread_create(&(pub[i].thread_id), NULL, publisher, &threadEnq[j]);
 
+
 								}
 								break;
 							}
+
 						}
 					}
 				}else if(strcmp(command[1], "subscriber") == 0){
@@ -394,7 +399,7 @@ int main(int argc, char* argv[]){
 						}
 
 						sleep(1);
-						for(i=0; i<MAXENTRIES; i++){
+						for(i=0; i<actSub; i++){
 							if(sub[i].flag == 0){
 								for(j=0; j<sub_cnt; j++){
 									sub[i].flag = 1;
