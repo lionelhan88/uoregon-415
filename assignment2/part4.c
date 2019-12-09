@@ -10,160 +10,206 @@
 #include <fcntl.h> 
 #include <signal.h>
 
-
-pid_t forkChild(char *command, char **arguments){
-	pid_t pid; 
-
-	pid = fork();
-	if(pid == -1){
-		perror("fork");			
-	}else if(pid == 0){
-		printf("child pid is %d\n", getpid());	
-		execvp( command, arguments);
-		system("sleep 2");
-		_exit(0);
-	}
-	return pid;
-}
-
-void singler(int count, int signal, pid_t *pid){
-	int i;
-	printf("recieved signal %d\n", signal);
-	for(i=1; i<=count; i++){
-		kill(pid[i], signal);
-	}
-	printf("--------------------------------------------------------------------------------\n");
-}
+void sighandler(int);
 
 static int alarmFlg = 0;
 void alarmHandler(int signal){
-
-	alarmFlg=1;
-
+    alarmFlg=1;
 }
 
+//Reference of proc
 
-void MCP_Stats(pid_t _pid){
-	   
-    char file[1000];
-    sprintf(file, "/proc/%u/stat", _pid);
+//https://stackoverflow.com/questions/33266678/how-to-extract-info-in-linux-with-a-c-code-from-proc
+//https://linux.die.net/man/5/proc
+//https://www.redhat.com/archives/axp-list/2001-January/msg00363.html
+//https://stackoverflow.com/questions/1420426/how-to-calculate-the-cpu-usage-of-a-process-by-pid-in-linux-from-c
+void print_status(pid_t _pid){
 
-    FILE *fp = fopen(file, "r");
-    if (fp == NULL) return;
+    //get the info of this requested PID from /proc
+    char tmp[1000];
+    sprintf(tmp, "/proc/%u/stat", _pid);
 
-    int pid, utime, stime, ppid;
-    long signal, blocked, flags;
-    char name[1000], state;
-    fscanf(fp, "%d %s %c %*d %*d %*d %*lu %*lu %*lu", 
-    	&pid, name, &state, &ppid, &flags, &utime, &stime, &signal);
 
-    printf("[%d] | %s | state: %c | flags: %lu | time: %lu | signal: %lu \n", 
-    	pid, name, state, flags, utime + stime, signal);								// take 
-    printf("--------------------------------------------------------------------------------\n");
-    fclose(fp);
+    FILE *filename = fopen(tmp, "r");
+    if (filename == NULL) return;
+
+    int pid_num, stime, utime;
+    char command[1000], state;
+    unsigned long vsize;
+ 
+    fscanf(filename, "%d %s %c %lu %lu %lu", &pid_num, command, &state, &utime, &stime, &vsize);
+
+    printf("command = %s   state = %c  stime = %lu   utime = %lu  execution time = %lu  vsize = %lu\n", 
+    command , state, stime, utime, utime + stime , vsize);//print the reading command
+    //The filename of the executable, in parentheses. 
+    //This is visible whether or not the executable is swapped out.
+    //printf("state = %c\n", state);
+    //print the state of child process
+    //printf("pid = %d\n", pid_num);
+    //printf("stime = %lu\n", stime);
+    //print stime:Amount of time that this process has been scheduled
+    //in kernel mode, measured in clock ticks (divide by sysconf(_SC_CLK_TCK)).
+    //printf("utime = %lu\n", utime);
+    //printf("execution time = %lu\n", utime + stime);
+    //print the execution time
+    //printf("vsize = %lu\n", vsize);
+    //print the Virtual memory size in bytes.
+
+    //close file
+    fclose(filename);
 }
 
+int main(int argc, char *argv[]) {
+    FILE *input = NULL;
+    //char buf[1024];
+    size_t nread;
+    char *line;
+    size_t bufsize = 1024;
+    int count_line = 0;
+    int k;
+    const char *space = " ";
+    char *token;
+    char **ptr;
+    size_t ptrSize = 20;
 
-int main(int argc, char *argv[]){
-
-	size_t size, line;
-	char *text= NULL;
-	char* token = NULL;
-	pid_t pid[10];
-	FILE *fp;
-	int count=0, i, j=0, wstatus, countArg = 0, k, a=0, commands,x;
-
-	if(argc != 2){
-		printf("The program need exact one file to execute, please try again\n");
-		exit(-1);
-	}
-	if(strstr(argv[1], ".txt")){
-		fp = fopen(argv[1], "r");
-		while((line = getline(&text, &size, fp)) != -1){			// while loop
-
-			for(i=0; i<strlen(text); i++){
-				if(text[i] == ' '){
-	 				countArg++;
- 				}
-			}
-			count = countArg + 1; 
-			char *array[count];										// count how many arguments each line has in the file
-			for(i=0; i <= count ; i++){
-				array[i] = NULL;									// initialize an array pointer
-			}
-			token = strtok(text, " \r\n");
-			for(i=0; i < count ; i++){
-				array[i] = token;									// store token into the array pointer
-				token = strtok(NULL, " \r\n");
-			}
-	
-		 	pid[a] = forkChild(array[0], array);					// fork child processes
-		 
-		 	a++;
-			count = 0;
-			countArg = 0;
-			j++;
-		}
-
-		system("sleep 1");
-		for(i=0; i<j; i++){
-			printf("suspending pid %d\n", pid[i]);
-			kill(pid[i], SIGSTOP);
-		}
-		printf("--------------------------------------------------------------------------------\n");
-		system("sleep 2");
-		int runPid=0,  a=1, b=0;
-		pid_t w;
-
-		kill(pid[0], SIGCONT);
-		while(a){
-			signal(SIGALRM,alarmHandler);
-			
-			alarm(2);
-			system("sleep 2");
-			if(alarmFlg==1){
-				w = waitpid(pid[runPid%j], &wstatus, WNOHANG);
-				while(1){
-					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending stop signal to current running child
-						printf("stopping signal to %d\n", pid[runPid%j]);
-						printf("--------------------------------------------------------------------------------\n");
-						kill(pid[runPid%j], SIGSTOP);	
-						runPid++;
-						break;
-					}else{
-						printf("Child is finished %d\n", pid[runPid%j]);
-						printf("--------------------------------------------------------------------------------\n");
-						break;
-					}
-				}
-
-				while(1){
-					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending run signal to next alive child
-						printf("running signal to %d\n", pid[runPid%j]);
-						printf("--------------------------------------------------------------------------------\n");
-						kill(pid[runPid%j], SIGCONT);	
-						system("sleep 2");
-						 for(i = 0; i < j; i++){
-	                        if(waitpid(pid[i], &wstatus, WNOHANG) == 0){
-	                            MCP_Stats(pid[i]); //print the running process status
-	                        }
-	                    }
-						break;
-					}
-					runPid++;
-				}
-				alarmFlg = 0 ;
-		}
-		for( i = 0 ; i < j; i++){																// check if there is any child alive
-            if((w = waitpid(pid[i], &wstatus, WNOHANG)) == 0){
-                a = 1;
-            }else{
-                a = 0;
-            }   
+    if (argc == 2) {  
+        input = fopen(argv[1], "r");
+        if (!input) {//error handling
+            printf("%s not exiting\n", argv[1]);
+            exit(1);
         }
-	}}
-	free(text);
-	fclose(fp);
-	
-	return 0;
+    }
+
+    line = (char *)malloc(bufsize * sizeof(char));
+    while((nread = getline(&line, &bufsize, input)) != -1){
+        count_line += 1;
+    }
+    free(line);
+    fclose(input);
+
+    line = (char *)malloc(bufsize * sizeof(char));
+    pid_t pid[count_line];
+    input = fopen(argv[1], "r");
+
+    for(int index = 0 ; index < count_line; index++){
+        ptr = (char **)malloc(ptrSize * sizeof(char*));
+        memset(ptr, 0, sizeof(ptr));
+        getline(&line, &bufsize, input);
+
+        // *ptr = (char *)malloc(count_line * sizeof(char));
+        strtok(line , "\n");
+        int arg_index = 1;
+        token = NULL;
+        token = strtok(line, space);
+        ptr[0] = (char*)malloc(strlen(token) + 1);
+        strcpy(ptr[0],token);
+        //printf("%s\n", ptr[0]);
+        token = strtok(NULL, space);
+        while(token != NULL){
+            //printf("%s\n", token);
+            ptr[arg_index] = malloc(strlen(token)+1);
+            //printf("123 %s\n", ptr[arg_index]);
+            strcpy(ptr[arg_index++],token);
+            token = strtok(NULL, space);
+        }
+        ptr[arg_index++] = NULL;
+        pid[index] = fork();
+        if(pid[index] < 0){
+            printf("failed to fork\n");
+        }
+        if(pid[index] == 0){
+            struct sigaction sa; //initial the sigaction struct
+            sa.sa_handler = sighandler; //set sighandler to sa struct
+            sigemptyset(&sa.sa_mask); //empty and clean the set
+            sa.sa_flags = 0; //set flag as default
+            sigaction(SIGALRM, &sa, NULL); //
+            //printf("the pid is %d\n", getpid());
+            fclose(input);
+            free(line);
+            execvp(ptr[0],ptr);
+            for(k = 0; k < (arg_index); k++){ //free the ptr array
+                free(ptr[k]);
+            }
+            free(ptr);
+            _exit(-1);
+        }
+        for(k = 0; k < (arg_index); k++){
+            free(ptr[k]);
+        }
+        free(ptr);
+    }
+
+    free(line);
+
+    int w, wstatus;
+
+    for(int k = 0 ; k < count_line; k++){
+        printf("stop pid %d\n", pid[k]);
+        kill(pid[k], SIGSTOP); //send SIGINT to terminate the child
+    }
+
+    for(int k=0; k<count_line; k++){
+        w = waitpid(pid[k], &wstatus, WNOHANG);
+    }
+
+    kill(pid[0], SIGCONT);
+    printf("     The RUNNING/CHECKING pid is: %d\n", pid[0]);
+    printf(" -------------------------------------------------\n");
+    printf("\n");
+    int runPid = 0;
+    int check2 = 1;
+    while(check2){
+        signal(SIGALRM,alarmHandler);
+        alarm(3);
+        sleep(3);
+        if(alarmFlg == 1){
+            while(1){
+                if((w = waitpid(pid[runPid%count_line], &wstatus, WNOHANG)) == 0){
+                    printf("     The STOPING pid is: %d\n", pid[runPid%count_line]);
+                    kill(pid[runPid%count_line],SIGSTOP);
+                    runPid++;
+                    break;
+                }else{
+                    printf("     The %d have done\n", pid[runPid%count_line]);
+                    // index++;
+                    break;
+                }               
+            }
+
+            while(1){
+                if((w = waitpid(pid[runPid%count_line], &wstatus, WNOHANG)) == 0){
+                    printf("     The RUNNING/CHECKING  pid is: %d\n", pid[runPid%count_line]);
+                    kill(pid[runPid%count_line],SIGCONT);
+                    sleep(1);
+                    for(int checkindex = 0; checkindex < count_line; checkindex++){
+                        if(waitpid(pid[checkindex], &wstatus, WNOHANG) == 0){
+                            print_status(pid[checkindex]); //print the running process status
+                        }
+                    }
+                    break;
+                }
+                runPid++;
+            }
+            alarmFlg = 0;
+        }
+        printf(" -------------------------------------------------\n");
+        
+        for(int i = 0 ; i < count_line; i++){
+            if((w = waitpid(pid[i], &wstatus, WNOHANG)) == 0){
+                check2 = 1;
+            }else{
+                check2 = 0;
+            }   
+        }          
+    }
+
+    printf("All child processes joined. Exiting\n");
+    fclose(input);
+
+    return 0;
+}
+
+void sighandler(int signum)
+{   
+    
 }
