@@ -1,12 +1,36 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
 #include <sys/wait.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <fcntl.h> 
+#include <signal.h>
+
+
+void myHandler(int mySignal){
+
+	printf("Child Process: %d waiting - Received signal: %d\n", getpid(),mySignal);
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigprocmask(SIG_SETMASK, &set, NULL);
+	int sig;
+	sigwait(&set, &sig);
+}
 
 
 pid_t forkChild(char *command, char **arguments){
 	pid_t pid;
+	struct sigaction act;
+	act.sa_handler = &myHandler;
+	sigset_t set;
+	sigemptyset(&set);
+	sigaddset(&set, SIGUSR1);
+	sigprocmask(SIG_BLOCK, &set, NULL);
 
 	pid = fork();
 	if(pid == -1){
@@ -14,8 +38,9 @@ pid_t forkChild(char *command, char **arguments){
 	}else if(pid == 0){
 
 		printf("child pid is %d\n", getpid());
+		sigaction(SIGUSR1,&act,NULL);
 		execvp( command, arguments);
-		system("sleep 2");
+		sleep(2);
 		_exit(0);
 	}
 	return pid;
@@ -23,29 +48,19 @@ pid_t forkChild(char *command, char **arguments){
 
 void singler(int count, int signal, pid_t *pid){
 	int i;
-	printf("recieved signal %d\n", signal);
 	for(i=1; i<=count; i++){
+		printf("receiving signal %d\n", signal);
 		kill(pid[i], signal);
 	}
 }
 
 static int alarmFlg = 0;
 void alarmHandler(int signal){
-
 	alarmFlg=1;
 
 }
 
-int exist_test(int exist[], int count){
-	int alive=0;
-	for(int x=0; x<count; x++){
-		if(exist[x] == 0){											// if any of element in exist is 0 keep while loop
-		//	printf("exist[%d] is %d\n",x, exist[x]);
-			alive += 1;
-		}
-	}
-	return alive;
-}
+
 
 int main(int argc, char *argv[]){
 
@@ -87,56 +102,54 @@ int main(int argc, char *argv[]){
 			j++;
 		}
 
+		system("sleep 1");
 		for(i=0; i<j; i++){
 			printf("suspending pid %d\n", pid[i]);
 			kill(pid[i], SIGSTOP);
 		}
-		system("sleep 1");
-		int runPid, exist[j], a=1, b=0;
+		system("sleep 2");
+		int runPid=0,  a=1, b=0;
 		pid_t w;
 
-		for(int i=0; i<j; i++){
-			exist[i] = 0;
-		}
-
-		signal(SIGALRM, alarmHandler);
-		kill(pid[0],SIGCONT);
-		w = waitpid(pid[0], &wstatus, WNOHANG);
-		a = exist_test(exist, j);
-		while(a>1){
-			for(runPid=0; runPid<j; runPid++){
-				printf("process %d is running \n", pid[runPid]);
-			 	if(w == 0){
-			 		alarm(1);
-			 		system("sleep 1");
-			 		if(alarmFlg==1){
-			 			printf("stopping signal to %d\n", pid[runPid]);
-						kill(pid[runPid], SIGSTOP);							// sending stop signal
-						printf("running signal to %d\n", pid[(runPid+1)%j]);
-						kill(pid[(runPid+1)%j],SIGCONT);					// sending start signal
-						alarmFlg = 0 ;
-			 		}
-
-				}else if(w == -1 ){
-					exist[runPid] = -1;											// respectively put -1 when pid is finished runningHa
+		kill(pid[0], SIGCONT);
+		while(a){
+			signal(SIGALRM,alarmHandler);
+			
+			alarm(2);
+			system("sleep 2");
+			if(alarmFlg==1){
+				w = waitpid(pid[runPid%j], &wstatus, WNOHANG);
+				while(1){
+					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending stop signal to current running child
+						printf("stopping signal to %d\n", pid[runPid%j]);
+						kill(pid[runPid%j], SIGSTOP);	
+						runPid++;
+						break;
+					}else{
+						printf("Child is finished %d\n", pid[runPid%j]);
+						break;
+					}
 				}
-			 	test = (runPid + 1) % j;
-				w = waitpid(pid[test], &wstatus, WNOHANG);
-				a = exist_test(exist, j);
-				printf("w here is %d, for pid: %d\n", w, pid[(runPid+1)%j]);
-			}
-		}
 
-		//w = waitpid(pid[runPid], &wstatus, WNOHANG);
-		if(w==0){
-			printf("running last available process %d\n", pid[runPid]);
-			kill(pid[runPid],SIGCONT);
+				while(1){
+					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending run signal to next alive child
+						printf("running signal to %d\n", pid[runPid%j]);
+						kill(pid[runPid%j], SIGCONT);	
+						system("sleep 2");
+						break;
+					}
+					runPid++;
+				}
+				alarmFlg = 0 ;
 		}
-		for(k=0; k<j; k++){
-			printf("pid is waiting %d\n", pid[k]);
-		 	waitpid(pid[k], &wstatus, WNOHANG );
-		}
-
+		for( i = 0 ; i < j; i++){																// check if there is any child alive
+            if((w = waitpid(pid[i], &wstatus, WNOHANG)) == 0){
+                a = 1;
+            }else{
+                a = 0;
+            }   
+        }
+	}
 	}
 	free(text);
 	fclose(fp);
