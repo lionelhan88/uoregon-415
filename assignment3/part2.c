@@ -63,7 +63,7 @@ int enqueue(struct topicQueue *tpQueue, char *URL, char *Caption, int pubID){
 	int headNum = (tpQueue->head - tpQueue->tail);
 	int j=0;
 
-	if(headNum == MAXENTRIES){
+	if(headNum == MAXENTRIES){														// return 0 if the queue is empty
 		return 0;
 	}
 
