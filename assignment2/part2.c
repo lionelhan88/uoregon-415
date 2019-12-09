@@ -109,8 +109,7 @@ int main(int argc, char *argv[]){
 
 		for(int k=0; k<j; k++){
 
-			printf("pid is waiting %d\n", pid[k]);
-		 	waitpid(pid[k], &wstatus, WNOHANG);
+		 	waitpid(pid[k], &wstatus, WUNTRACED);
 			}
 
 	}
