@@ -9,7 +9,8 @@
 #define NUMOFBUFFER 500									// max number of queues
 int delta = 0;											// delta variable to clean up the old entries
 int enNum = 1;
-int check = 1 , subFile=0, subTable=0;
+int check = 1 , subFile=0, subTable=0, z=-1;
+int i, j;
 
 
 struct topicEntry{
@@ -47,7 +48,7 @@ struct threadEnq{
 };
 
 struct topicQueue Registry[NUMOFBUFFER];
-struct topicEntry temp;
+struct topicEntry temp1, tepp[MAXENTRIES];
 struct topicEntry Entries[NUMOFBUFFER][MAXENTRIES];
 struct threadEnq threadEnq[MAXENTRIES], threadDeq[MAXENTRIES], threadCle[NUMOFBUFFER];
 struct pthread pub[MAXENTRIES], sub[MAXENTRIES], cle;
@@ -94,24 +95,24 @@ int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp)
 		return 0;																		// or the entry has been deleted	
 	}																					// or the entry is the newest
 
-
+	z+=1;
 	for (int j = tpQueue->tail; j < tpQueue->head; j++){								// copy last entry +1 data to the temp buffer 
 		if (tpQueue->entry[j].entryNum == lastEntry){									// if the last entry is in the queue
-			temp->entryNum = tpQueue->entry[(j+1)].entryNum;
-			temp->timeStamp = tpQueue->entry[(j+1)].timeStamp;							// return 1 for the success
-			temp->pubID = tpQueue->entry[(j+1)].pubID;
-			strcpy(temp->topName, tpQueue->name);
-			strcpy(temp->photoURL, tpQueue->entry[(j+1)].photoURL);
-			strcpy(temp->photoCaption, tpQueue->entry[(j+1)].photoCaption);
+			tepp[z].entryNum = tpQueue->entry[(j+1)].entryNum;
+			tepp[z].timeStamp = tpQueue->entry[(j+1)].timeStamp;							// return 1 for the success
+			tepp[z].pubID = tpQueue->entry[(j+1)].pubID;
+			strcpy(tepp[z].topName, tpQueue->name);
+			strcpy(tepp[z].photoURL, tpQueue->entry[(j+1)].photoURL);
+			strcpy(tepp[z].photoCaption, tpQueue->entry[(j+1)].photoCaption);
 			return 1;
 		}else if(lastEntry <= tpQueue->tail){											// copy last entry +1 data to the temp buffer 
-			temp->entryNum = tpQueue->entry[tpQueue->tail].entryNum;					// if last entry isn't in the queue
-			temp->timeStamp = tpQueue->entry[tpQueue->tail].timeStamp;
-			temp->pubID = tpQueue->entry[tpQueue->tail].pubID;							// ie. if last entry is 1 and entry 1, 2,
-			strcpy(temp->topName, tpQueue->name);										// isn't in the queue, then take entry 3
-			strcpy(temp->photoURL, tpQueue->entry[tpQueue->tail].photoURL);
-			strcpy(temp->photoCaption, tpQueue->entry[tpQueue->tail].photoCaption);
-			return temp->entryNum;														// return the entry number 
+			tepp[z].entryNum = tpQueue->entry[tpQueue->tail].entryNum;					// if last entry isn't in the queue
+			tepp[z].timeStamp = tpQueue->entry[tpQueue->tail].timeStamp;
+			tepp[z].pubID = tpQueue->entry[tpQueue->tail].pubID;							// ie. if last entry is 1 and entry 1, 2,
+			strcpy(tepp[z].topName, tpQueue->name);										// isn't in the queue, then take entry 3
+			strcpy(tepp[z].photoURL, tpQueue->entry[tpQueue->tail].photoURL);
+			strcpy(tepp[z].photoCaption, tpQueue->entry[tpQueue->tail].photoCaption);
+			return tepp[z].entryNum;														// return the entry number 
 		}
 	}
 	return 0;
@@ -216,7 +217,7 @@ void* subscriber(void* arg){
 	pthread_mutex_unlock(&condition_mutex);
 	
 	pthread_mutex_lock(&mutex[threadDeq->lockPos]);									// lock the critical section for subscriber
-	threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp);
+	threadDeq->result = getEntry(&Registry[threadEnq->regisNum], threadDeq->lastEntry, &temp1);
 	printf("subscriber result: %d\n", threadDeq->result);
 	printf("-------------------------------------------------------------------------\n");
 	pthread_mutex_unlock(&mutex[threadDeq->lockPos]);								// unlock the subscriber critical section
@@ -239,7 +240,7 @@ void* pthread_cleanUp(void* arg){
 
 	while(check == 1){
 		pthread_mutex_lock(&lock[threadCle->lockPos]);								// lock the critical section for clean up
-		check = cleanUp(&temp, &Registry[threadCle->regisNum]);
+		check = cleanUp(&temp1, &Registry[threadCle->regisNum]);
 		pthread_mutex_unlock(&lock[threadCle->lockPos]);							// unlock the subscriber critical section
 		sched_yield();																// yeild to publisher and subscriber
 	}
@@ -343,9 +344,9 @@ int main(int argc, char* argv[]){
 							}
 						}
 
-						for(int i=0; i<MAXENTRIES; i++){							// create thread for publisher
+						for(i=0; i<MAXENTRIES; i++){							// create thread for publisher
 							if(pub[i].flag == 0){
-								for(int j=0; j<pub_cnt; j++){
+								for(j=0; j<pub_cnt; j++){
 									pub[i].flag = 1;
 									threadEnq[j].topicEntry.pubID = pub[i].thread_id;
 									pthread_create(&(pub[i].thread_id), NULL, publisher, &threadEnq[j]);
@@ -394,9 +395,9 @@ int main(int argc, char* argv[]){
 							}
 						}
 						sleep(1);
-						for(int i=0; i<MAXENTRIES; i++){						// create thread for subscriber
+						for(i=0; i<MAXENTRIES; i++){						// create thread for subscriber
 							if(sub[i].flag == 0){
-								for(int j=0; j<sub_cnt; j++){
+								for(j=0; j<sub_cnt; j++){
 									sub[i].flag = 1;
 									pthread_create(&(sub[i].thread_id), NULL, subscriber, &threadDeq[j]);
 
