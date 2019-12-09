@@ -192,7 +192,8 @@ void* publisher(void* arg){
 	pthread_mutex_lock(&mutex[threadEnq->lockPos]); 									// lock the critical section for publisher
 	threadEnq->result = enqueue(&Registry[threadEnq->regisNum], threadEnq->topicEntry.photoURL,
 			threadEnq->topicEntry.photoCaption, threadEnq->topicEntry.pubID);
-	printf("publisher result: %d\n", threadEnq->result);
+	printf("publisher result: %d. Topic queue head: %d, tail: %d\n", 
+			threadEnq->result, Registry[threadEnq->regisNum]->head, Registry[threadEnq->regisNum]->tail);
 	printf("-------------------------------------------------------------------------\n");
 	pthread_mutex_unlock(&mutex[threadEnq->lockPos]);									// unlock the publisher critical section
 	for (int i = 0; i < MAXENTRIES; ++i){
