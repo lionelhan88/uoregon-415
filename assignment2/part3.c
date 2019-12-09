@@ -52,6 +52,7 @@ void singler(int count, int signal, pid_t *pid){
 		printf("receiving signal %d\n", signal);
 		kill(pid[i], signal);
 	}
+	printf("--------------------------------------------------------------------------------\n");
 }
 
 static int alarmFlg = 0;
@@ -107,6 +108,7 @@ int main(int argc, char *argv[]){
 			printf("suspending pid %d\n", pid[i]);
 			kill(pid[i], SIGSTOP);
 		}
+		printf("--------------------------------------------------------------------------------\n");
 		system("sleep 2");
 		int runPid=0,  a=1, b=0;
 		pid_t w;
@@ -122,11 +124,13 @@ int main(int argc, char *argv[]){
 				while(1){
 					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending stop signal to current running child
 						printf("stopping signal to %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
 						kill(pid[runPid%j], SIGSTOP);	
 						runPid++;
 						break;
 					}else{
 						printf("Child is finished %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
 						break;
 					}
 				}
@@ -134,6 +138,7 @@ int main(int argc, char *argv[]){
 				while(1){
 					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending run signal to next alive child
 						printf("running signal to %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
 						kill(pid[runPid%j], SIGCONT);	
 						system("sleep 2");
 						break;

@@ -1,8 +1,14 @@
+#define _POSIX_C_SOURCE 199309L
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <string.h>
 #include <sys/wait.h>
+#include <dirent.h>
+#include <sys/stat.h>
+#include <fcntl.h> 
+#include <signal.h>
 
 
 pid_t forkChild(char *command, char **arguments){
@@ -12,8 +18,7 @@ pid_t forkChild(char *command, char **arguments){
 	if(pid == -1){
 		perror("fork");			
 	}else if(pid == 0){
-
-		//printf("child pid is %d\n", getpid());	
+		printf("child pid is %d\n", getpid());	
 		execvp( command, arguments);
 		system("sleep 2");
 		_exit(0);
@@ -27,6 +32,7 @@ void singler(int count, int signal, pid_t *pid){
 	for(i=1; i<=count; i++){
 		kill(pid[i], signal);
 	}
+	printf("--------------------------------------------------------------------------------\n");
 }
 
 static int alarmFlg = 0;
@@ -38,28 +44,24 @@ void alarmHandler(int signal){
 
 
 void MCP_Stats(pid_t _pid){
-	    //get the info of this requested PID from /proc
+	   
     char file[1000];
     sprintf(file, "/proc/%u/stat", _pid);
 
-    //see if we got info, if so open it or return
     FILE *fp = fopen(file, "r");
     if (fp == NULL) return;
 
-    int pidl, utime, stime;
+    int pid, utime, stime, ppid;
+    long signal, blocked, flags;
     char name[1000], state;
-    //grab only what we're looking for below, and ignore the rest
-    fscanf(fp, "%d %s %c %*d %*d %*d %*d %*d %*d %*d %*d %*d %*d %d %d", &pidl, name, &state, &utime, &stime);
-    //we are going to print the pid, the name of the pid, the state the pid
-    //is in (S, Z, T, etc.), and the total time. each tabbed
-    printf("[%d] | %s | %c | %d\n", pidl, name, state, utime + stime);
+    fscanf(fp, "%d %s %c %*d %*d %*d %*lu %*lu %*lu", 
+    	&pid, name, &state, &ppid, &flags, &utime, &stime, &signal);
 
-    //close file
+    printf("[%d] | %s | state: %c | flags: %lu | time: %lu | signal: %lu \n", 
+    	pid, name, state, flags, utime + stime, signal);								// take 
+    printf("--------------------------------------------------------------------------------\n");
     fclose(fp);
-
-
 }
-
 
 
 int main(int argc, char *argv[]){
@@ -69,7 +71,7 @@ int main(int argc, char *argv[]){
 	char* token = NULL;
 	pid_t pid[10];
 	FILE *fp;
-	int count=0, i, j=0, wstatus, countArg = 0, k, a=0, commands;
+	int count=0, i, j=0, wstatus, countArg = 0, k, a=0, commands,x;
 
 	if(argc != 2){
 		printf("The program need exact one file to execute, please try again\n");
@@ -103,61 +105,63 @@ int main(int argc, char *argv[]){
 			j++;
 		}
 
+		system("sleep 1");
 		for(i=0; i<j; i++){
 			printf("suspending pid %d\n", pid[i]);
 			kill(pid[i], SIGSTOP);
 		}
+		printf("--------------------------------------------------------------------------------\n");
 		system("sleep 2");
-		int runPid, exist[j], a=1, b=0;
+		int runPid=0,  a=1, b=0;
 		pid_t w;
 
-		for(int i=0; i<j; i++){
-			exist[i] = 0;
-		}
-
-		signal(SIGALRM, alarmHandler);	
-		kill(pid[0],SIGCONT);
-	//	MCP_Stats(pid[0]);
-		w = waitpid(pid[0], &wstatus, WNOHANG);
+		kill(pid[0], SIGCONT);
 		while(a){
-			for(runPid=0; runPid<j; runPid++){
-				alarm(1);
-			 	system("sleep 2");
-			 	if(w == 0 ){
-			 		MCP_Stats(pid[runPid]);
-			 		if(alarmFlg==1){
-			 			
-			 			//printf("stopping signal to %d\n", pid[runPid]);		
-						kill(pid[runPid], SIGSTOP);							// sending stop signal
-						
-						//printf("running signal to %d\n", pid[(runPid+1)%j]);
-						kill(pid[(runPid+1)%j],SIGCONT);					// sending start signal
-						MCP_Stats(pid[(runPid+1)%j]);
-						
-						alarmFlg = 0 ;
-			 		}
+			signal(SIGALRM,alarmHandler);
+			
+			alarm(2);
+			system("sleep 2");
+			if(alarmFlg==1){
+				w = waitpid(pid[runPid%j], &wstatus, WNOHANG);
+				while(1){
+					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending stop signal to current running child
+						printf("stopping signal to %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
+						kill(pid[runPid%j], SIGSTOP);	
+						runPid++;
+						break;
+					}else{
+						printf("Child is finished %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
+						break;
+					}
+				}
 
-						
-				}else if(w == -1 ){
-					exist[b] = -1;											// respectively put -1 when pid is finished running 
-					b++;
+				while(1){
+					if((w = waitpid(pid[runPid%j], &wstatus, WNOHANG)) == 0){					// sending run signal to next alive child
+						printf("running signal to %d\n", pid[runPid%j]);
+						printf("--------------------------------------------------------------------------------\n");
+						kill(pid[runPid%j], SIGCONT);	
+						system("sleep 2");
+						 for(i = 0; i < j; i++){
+	                        if(waitpid(pid[i], &wstatus, WNOHANG) == 0){
+	                            MCP_Stats(pid[i]); //print the running process status
+	                        }
+	                    }
+						break;
+					}
+					runPid++;
 				}
-				w = waitpid(pid[(runPid+1)%j], &wstatus, WNOHANG);
-			}
-			for(int x=0; x<j; x++){
-				if(exist[x] == 0){											// if any of element in exist is 0 keep while loop
-					a=1;
-				}else{
-					a=0;													// exit while loop when all elements are -1
-				}
-			} 
-		}		
-		for(k=0; k<j; k++){
-			printf("pid is waiting %d\n", pid[k]);
-		 	waitpid(pid[k], &wstatus, WEXITED );
+				alarmFlg = 0 ;
 		}
-		
-	}
+		for( i = 0 ; i < j; i++){																// check if there is any child alive
+            if((w = waitpid(pid[i], &wstatus, WNOHANG)) == 0){
+                a = 1;
+            }else{
+                a = 0;
+            }   
+        }
+	}}
 	free(text);
 	fclose(fp);
 	
