@@ -54,7 +54,7 @@ void MCP_Stats(pid_t _pid){
     int pid, utime, stime, ppid;
     long signal, blocked, flags;
     char name[1000], state;
-    fscanf(fp, "%d %s %c %d %d %d %lu %lu %lu", 
+    fscanf(fp, "%d %s %c %d %*d %*d %*lu %*lu %*lu", 
     	&pid, name, &state, &ppid, &flags, &utime, &stime, &signal);
 
     printf("[%d] | %s | state: %c | flags: %lu | utime: %lu | stime: %lu | signal: %lu \n", 
