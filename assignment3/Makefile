@@ -7,4 +7,4 @@ main.o: main.c
 	gcc -c main.c 
 	
 clean:
-	rm -f core *.o main.exe
+	rm -f core *.o *.html main.exe
