@@ -464,6 +464,55 @@ int main(int argc, char* argv[]){
 					break;	
 				}
 
+				sleep(1);
+				int o = 0, v=0;											// write data to subscriber html file
+				for(i=0; i<subFile; i++){
+					x += 1;
+					snprintf(name, 12, "Sub_%d.html", x);
+					FILE *ptrFile = fopen( name, "w");
+					for(j=0; j<m; j++){
+						fprintf(ptrFile, "<!DOCTYPE html>\n"); 
+						fprintf(ptrFile, "<html>\n"); 
+						fprintf(ptrFile, "<title>%s</title>\n", name);
+						fprintf(ptrFile, "\n"); 
+						fprintf(ptrFile, "<style>\n");
+						fprintf(ptrFile, "table, th, td {\n");
+						fprintf(ptrFile, "  border: 1px solid black;\n");
+						fprintf(ptrFile, "  border-collapse: collapse;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "th, td {\n");
+						fprintf(ptrFile, "  padding: 5px;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "th {\n");
+						fprintf(ptrFile, "  text-align: left;\n");
+						fprintf(ptrFile, "}\n");
+						fprintf(ptrFile, "</style>\n");
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "</head>\n");
+						fprintf(ptrFile, "<body>\n");
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<h1>Subsriber: %s</h1>\n", name);
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<h2>Topic Name: %s</h2>\n", tepp[v].topName);
+						fprintf(ptrFile, "\n");
+						fprintf(ptrFile, "<table style=\"width:100%%\" align=\"middle\">\n");
+						fprintf(ptrFile, " <tr>\n");
+						fprintf(ptrFile, "  <th>CAPTION</th>\n");
+						fprintf(ptrFile, "  <th>PHOTO-URL</th>\n");
+						fprintf(ptrFile, " </tr>\n");
+						fprintf(ptrFile, " <tr>\n");
+						fprintf(ptrFile, "  <td>%s</td>\n", tepp[v].photoCaption);
+						fprintf(ptrFile, "  <td>%s</td>\n", tepp[v].photoURL);
+						fprintf(ptrFile, "</table>\n");
+						fprintf(ptrFile, "</body>\n");
+						fprintf(ptrFile, "</html>\n");
+						v += 1;
+
+					}
+					
+				}
+
+
 				sleep(3);
 				for (int i = 0; i < actQueue; ++i){								// create clean up thread
                 	threadCle[i].regisNum = i;
