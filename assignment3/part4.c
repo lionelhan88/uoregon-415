@@ -76,15 +76,15 @@ int enqueue(struct topicQueue *tpQueue, char *URL, char *Caption, int pubID){
 		tpQueue->tail = 0;
 	}
 
-	tpQueue->head = headNum;
-	tpQueue->entry[headNum].pubID = pubID;
-	strcpy(tpQueue->entry[headNum].photoURL, URL);
-	strcpy(tpQueue->entry[headNum].photoCaption, Caption);
-	tpQueue->entry[headNum].entryNum = enNum;
-	gettimeofday(&tpQueue->entry[headNum].timeStamp,NULL);
-	headNum += 1;
-	tpQueue->head = headNum;
-	enNum += 1;
+	tpQueue->head = headNum;														//----------------------//
+	tpQueue->entry[headNum].pubID = pubID;											//	  	                //
+	strcpy(tpQueue->entry[headNum].photoURL, URL);									//	  	                //
+	strcpy(tpQueue->entry[headNum].photoCaption, Caption);							//	add entry data      //
+	tpQueue->entry[headNum].entryNum = enNum;										//	into the queue      //
+	gettimeofday(&tpQueue->entry[headNum].timeStamp,NULL);							//	  	                //
+	headNum += 1;																	//	  	                //
+	tpQueue->head = headNum;														//	  	                //
+	enNum += 1;																		//----------------------//
 	return 1;
 } // enqueue()
 
@@ -102,8 +102,6 @@ int getEntry(struct topicQueue *tpQueue, int lastEntry, struct topicEntry *temp)
 			strcpy(tepp[z].topName, tpQueue->name);
 			strcpy(tepp[z].photoURL, tpQueue->entry[(j+1)].photoURL);
 			strcpy(tepp[z].photoCaption, tpQueue->entry[(j+1)].photoCaption);
-			printf("zzzzz is %d, %s, %s, %s \n", 
-					z, tepp[z].photoURL, tepp[z].photoCaption, tepp[z].topName);
 			return 1;
 		}else if(lastEntry <= tpQueue->tail){
 			tepp[z].entryNum = tpQueue->entry[tpQueue->tail].entryNum;
