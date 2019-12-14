@@ -63,16 +63,16 @@ int enqueue(struct topicQueue *tpQueue, char *URL, char *Caption, int pubID){
 	int headNum = (tpQueue->head - tpQueue->tail);
 	int j=0;
 
-	if(headNum == MAXENTRIES){
+	if(headNum == MAXENTRIES){														// return 0 if the queue is empty
 		return 0;
 	}
 
-	for (int k = tpQueue->tail; k < tpQueue->head; ++k){
+	for (int k = tpQueue->tail; k < tpQueue->head; ++k){							// reset the head
 		tpQueue->entry[j] = tpQueue->entry[k];
 		j++;
 	}
 
-	if (tpQueue->tail != 0){
+	if (tpQueue->tail != 0){														// reset the tail
 		tpQueue->tail = 0;
 	}
 
@@ -406,7 +406,6 @@ int main(int argc, char* argv[]){
 								for(j=0; j<sub_cnt; j++){
 									sub[i].flag = 1;
 									pthread_create(&(sub[i].thread_id), NULL, subscriber, &threadDeq[j]);
-
 								}
 								break;
 							}
@@ -469,8 +468,6 @@ int main(int argc, char* argv[]){
 
 					}
 				}
-
-				
 
 				for (int i = 0; i < actQueue; ++i){
                 	threadCle[i].regisNum = i;
