@@ -1,0 +1,17 @@
+put 1 "P1.jpg" "Taurus Mountains"
+sleep 1500
+put 1 "M2.jpg" "Pointy Mountain"
+sleep 1500
+put 1 "M3.jpg" "Mount Bachelor"
+sleep 1500
+put 1 "M4.jpg" "Almost Ski Season"
+sleep 1500
+put 2 "M5.jpg" "Shasta"
+sleep 1500
+put 2 "M6.jpg" "Everest"
+sleep 1500
+put 2 "M7.jpg" "Mount Fuji"
+sleep 1500
+put 2 "M8.jpg" "El Cap"
+sleep 1500
+stop
