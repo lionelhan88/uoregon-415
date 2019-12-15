@@ -1,0 +1,9 @@
+create topic 0 "Mnt1" 6
+create topic 1 "Mnt2" 3
+query topics
+add publisher "p1.txt"
+query publishers
+add subscriber "s1.txt"
+query subscribers
+delta 5
+start
